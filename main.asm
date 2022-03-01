@@ -82,8 +82,8 @@ _socket:
     mov rdx, 0
     syscall
 
-    ; save socket fd into rbx
-    mov rbx, rax
+    ; save listening socket fd
+    mov [server + server_t.listening_fd], rax
 
 _bind:
     ; sys_bind(fd, &sockaddr_in, addrlen)
@@ -96,21 +96,20 @@ _bind:
 _listen:
     ; sys_listen(fd, backlog)
     mov rax, 50
-    mov rdi, rbx
+    mov rdi, [server + server_t.listening_fd]
     mov rsi, 5
     syscall
 
 _accept:
     ; sys_accept(fd, &peer_sockaddr, peer_addrlen)
     mov rax, 43
-    mov rdi, rbx
+    mov rdi, [server + server_t.listening_fd]
     mov rsi, 0
     mov rdx, 0
     syscall
 
-    ; save peer fd into rcx
-    mov rcx, rax
-
+    ; save peer socket fd
+    mov [server + server_t.connecting_fd], rax
 
 _handle_conn:
     ; sys_mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
