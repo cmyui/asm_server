@@ -2,4 +2,4 @@
 set -euo pipefail
 
 ./build.sh
-./main
+strace ./main.out
