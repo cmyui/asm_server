@@ -88,15 +88,9 @@ _socket:
 _bind:
     ; sys_bind(fd, &sockaddr_in, addrlen)
     mov rax, 49
-    mov rdi, rbx
-
-    ; push sockaddr_in struct attrs in reverse order
-    push qword [rbp + sockaddr_in + sockaddr_in_t.sin_addr]
-    push word [rbp + sockaddr_in + sockaddr_in_t.sin_port]
-    push word [rbp + sockaddr_in + sockaddr_in_t.sin_family]
-
+    mov rdi, [server + server_t.listening_fd]
+    mov rsi, sockaddr_in
     mov rdx, 16 ; TODO: dynamically set struct size
-    mov rsi, rsp
     syscall
 
 _listen:
