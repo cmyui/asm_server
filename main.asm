@@ -60,7 +60,7 @@ section .data
         at sockaddr_in_t.sin_family, dw AF_INET
         at sockaddr_in_t.sin_port, dw SERVER_PORT
         at sockaddr_in_t.sin_addr, dd SERVER_ADDR
-        at sockaddr_in_t.sin_zero, dd 0, 0 ; TODO: learn dup()
+        at sockaddr_in_t.sin_zero, times 8 db 0
     iend
 
     ; create server instance
