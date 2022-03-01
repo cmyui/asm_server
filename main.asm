@@ -22,6 +22,8 @@
 ; TODO: error handling (-1 - -4096)
 
 section .data
+    NULL equ 0
+
     SOCK_STREAM equ 1
 
     AF_UNIX equ 1
@@ -119,11 +121,12 @@ _accept:
 _handle_conn:
     ; sys_mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
     mov rax, 9
-    mov rdi, PAGE_SIZE
-    mov rsi, PROT_READ | PROT_WRITE
-    mov rdx, MAP_PRIVATE | MAP_ANONYMOUS
-    mov r10, -1
-    mov r8, 0
+    mov rdi, NULL
+    mov rsi, PAGE_SIZE
+    mov rdx, PROT_READ | PROT_WRITE
+    mov r10, MAP_PRIVATE | MAP_ANONYMOUS
+    mov r8, -1
+    mov r9, 0
     syscall
 
     ; save mmap address into r12
