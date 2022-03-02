@@ -21,7 +21,10 @@
 
 ; TODO: error handling (-1 - -4096)
 
+section .bss
+
 section .data
+    ; constants
     NULL equ 0
 
     SOCK_STREAM equ 1
@@ -39,6 +42,11 @@ section .data
 
     SERVER_ADDR equ dword 0x00000000 ; 0.0.0.0
     SERVER_PORT equ word 0x8913 ; htons(5001)
+
+    ; standard stream fds
+    stdin equ 0
+    stdout equ 1
+    stderr equ 2
 
     ; syscall numbers
     sys_read equ 0
