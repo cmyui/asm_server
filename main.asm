@@ -40,6 +40,21 @@ section .data
     SERVER_ADDR equ dword 0x00000000 ; 0.0.0.0
     SERVER_PORT equ word 0x8913 ; htons(5001)
 
+    ; syscall numbers
+    sys_read equ 0
+    sys_write equ 1
+    sys_open equ 2
+    sys_close equ 3
+    sys_mmap equ 9
+    sys_mprotect equ 10
+    sys_munmap equ 11
+    sys_socket equ 41
+    sys_accept equ 43
+    sys_recvfrom equ 45
+    sys_bind equ 49
+    sys_listen equ 50
+    sys_exit equ 60
+
     ; create struct types
 
     struc sockaddr_in_t
@@ -76,7 +91,7 @@ _start:
 
 _socket:
     ; sys_socket(AF_INET, SOCK_STREAM, 0)
-    mov rax, 41
+    mov rax, sys_socket
     mov rdi, AF_INET
     mov rsi, SOCK_STREAM
     mov rdx, 0
@@ -87,7 +102,7 @@ _socket:
 
 _bind:
     ; sys_bind(fd, &sockaddr_in, addrlen)
-    mov rax, 49
+    mov rax, sys_bind
     mov rdi, [server + server_t.listening_fd]
     mov rsi, sockaddr_in
     mov rdx, 16 ; TODO: dynamically set struct size
@@ -95,14 +110,14 @@ _bind:
 
 _listen:
     ; sys_listen(fd, backlog)
-    mov rax, 50
+    mov rax, sys_listen
     mov rdi, [server + server_t.listening_fd]
     mov rsi, 5
     syscall
 
 _accept:
     ; sys_accept(fd, &peer_sockaddr, peer_addrlen)
-    mov rax, 43
+    mov rax, sys_accept
     mov rdi, [server + server_t.listening_fd]
     mov rsi, 0
     mov rdx, 0
@@ -113,7 +128,7 @@ _accept:
 
 _handle_conn:
     ; sys_mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
-    mov rax, 9
+    mov rax, sys_mmap
     mov rdi, NULL
     mov rsi, PAGE_SIZE
     mov rdx, PROT_READ | PROT_WRITE
@@ -132,6 +147,6 @@ _read:
 
 _exit:
     ; sys_exit(0)
-    mov rax, 60
+    mov rax, sys_exit
     mov rdi, 0
     syscall
