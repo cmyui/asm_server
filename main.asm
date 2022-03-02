@@ -97,6 +97,9 @@ _socket:
     mov rdx, 0
     syscall
 
+    cmp rax, 0
+    jl _exit_fail
+
     ; save listening socket fd
     mov [server + server_t.listening_fd], rax
 
@@ -108,12 +111,18 @@ _bind:
     mov rdx, 16 ; TODO: dynamically set struct size
     syscall
 
+    cmp rax, 0
+    jl _exit_fail
+
 _listen:
     ; sys_listen(fd, backlog)
     mov rax, sys_listen
     mov rdi, [server + server_t.listening_fd]
     mov rsi, 5
     syscall
+
+    cmp rax, 0
+    jl _exit_fail
 
 _accept:
     ; sys_accept(fd, &peer_sockaddr, peer_addrlen)
@@ -122,6 +131,9 @@ _accept:
     mov rsi, 0
     mov rdx, 0
     syscall
+
+    cmp rax, 0
+    jl _exit_fail
 
     ; save peer socket fd
     mov [server + server_t.connecting_fd], rax
@@ -140,13 +152,13 @@ _handle_conn:
     ; save mmap address into r12
     mov rax, r12
 
-_read:
-    ; sys_read(fd, buf, count)
-    mov rax, 0
-    mov rdi, rcx
+    ; exit with code 0
+    mov rdi, 0
+    jmp short _exit
 
+_exit_fail:
+    mov rdi, 1
 _exit:
     ; sys_exit(0)
     mov rax, sys_exit
-    mov rdi, 0
     syscall
