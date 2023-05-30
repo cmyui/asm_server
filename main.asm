@@ -21,15 +21,15 @@
 
 ; TODO: error handling (-1 - -4096)
 
-section .bss
+%include "http.asm"
 
+section .bss
 
 section .data
     connection_data times 4096 db 0  ; 4k
     socket_file db "/tmp/asmsocket.sock", 0
 
 section .rodata
-
     ; constants
     NULL equ 0
 
@@ -228,41 +228,7 @@ _recv:
     mov r9, 0
     syscall
 
-_parse_http_request:
-    xor rax, rax ; offset
-
-    ; save http_method
-    mov qword [request + request_t.http_method], connection_data
-__read_http_method:
-    inc rax
-    cmp byte [connection_data + rax], 32h
-    jne __read_http_method
-
-    mov byte [connection_data + rax], 0 ; null terminate
-
-    ; save http_path
-    lea rdi, [connection_data + rax + 1]
-    mov [request + request_t.http_path], rdi
-__read_http_path:
-    inc rax
-    cmp byte [connection_data + rax], 32h
-    jne __read_http_path
-
-    mov byte [connection_data + rax], 0 ; null terminate
-
-    ; save http_version
-    lea rdi, [connection_data + rax + 1]
-    mov [request + request_t.http_version], rdi
-__read_http_version:
-    inc rax
-    cmp byte [connection_data + rax], 0Ah ; \r
-    jne __read_http_version
-
-    mov byte [connection_data + rax], 0 ; null terminate
-
-    inc rax ; \n
-
-__parse_http_headers:
+    call _parse_http_request
 
 _program_finalization:
     ; exit with code 0
@@ -283,7 +249,6 @@ _close_listening_socket:
 _exit_fail:
     mov rdi, 1
 _exit:
-
     ; close socket if it's open
     cmp byte [server + server_t.connecting_fd], 0
     jne _close_listening_socket
