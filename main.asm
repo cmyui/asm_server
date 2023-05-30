@@ -21,8 +21,6 @@
 
 ; TODO: dynamic memory allocation
 
-%include "http.asm"
-
 section .rodata
     content_length_header_key db "Content-Length", 0
     content_type_header_key db "Content-Type", 0
@@ -159,6 +157,8 @@ section .data
 
 section .text
     global _start
+
+%include "http.asm"
 
 _start:
 
