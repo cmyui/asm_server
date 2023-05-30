@@ -13,3 +13,12 @@ run:
 
 debug:
 	gdb -ex 'run' ./main.out
+
+objdump:
+	objdump -s \
+		-j.rodata \
+		-j.data \
+		-j.bss \
+		-j.comment \
+		-j.text \
+		main.out

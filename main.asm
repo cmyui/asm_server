@@ -23,8 +23,6 @@
 
 %include "http.asm"
 
-section .bss
-
 section .rodata
     content_length_header_key db "Content-Length", 0
     content_type_header_key db "Content-Type", 0
@@ -130,7 +128,7 @@ section .data
         at sockaddr_in_t.sin_zero, times 8 db 0
     iend
 
-    ; create sockaddr_un_t unstance
+    ; create sockaddr_un_t instance
     sockaddr_un istruc sockaddr_un_t
         at sockaddr_un_t.sun_family, dw AF_UNIX
         at sockaddr_un_t.sun_path, times 108 db 0
