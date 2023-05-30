@@ -75,9 +75,6 @@ section .rodata
     sys_setsockopt equ 54
     sys_exit equ 60
 
-    ; create struct types
-
-
     ; create sockaddr_in_t class
     struc sockaddr_in_t
         .sin_family: resw 1
@@ -97,7 +94,7 @@ section .rodata
     ; create sockaddr_un_t class
     struc sockaddr_un_t
         .sun_family: resw 1
-        .sun_path: resw 1
+        .sun_path: resb 128
     endstruc
 
     ; create sockaddr_un_t unstance
@@ -130,12 +127,12 @@ section .rodata
 
     ; create headers instance
     headers istruc headers_t
-        at headers_t.content_length, dd 0
-        at headers_t.content_type, dd 0
-        at headers_t.connection, dd 0
-        at headers_t.host, dd 0
-        at headers_t.user_agent, dd 0
-        at headers_t.osu_token, dd 0
+        at headers_t.content_length, dq 0
+        at headers_t.content_type, dq 0
+        at headers_t.connection, dq 0
+        at headers_t.host, dq 0
+        at headers_t.user_agent, dq 0
+        at headers_t.osu_token, dq 0
     iend
 
     ; create request_t class
@@ -147,9 +144,9 @@ section .rodata
 
     ; create request instance
     request istruc request_t
-        at request_t.http_method, dd 0
-        at request_t.http_path, dd 0
-        at request_t.http_version, dd 0
+        at request_t.http_method, dq 0
+        at request_t.http_path, dq 0
+        at request_t.http_version, dq 0
     iend
 
 section .text
