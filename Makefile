@@ -12,7 +12,7 @@ run:
 	strace ./main.out
 
 debug:
-	gdb -ex 'run' ./main.out
+	gdb ./main.out
 
 objdump:
 	objdump -s \

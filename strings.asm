@@ -25,5 +25,6 @@ __match:
     ret
 
 __mismatch:
+    pop rax
     mov rdx, 1
     ret

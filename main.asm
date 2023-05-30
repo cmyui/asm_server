@@ -22,6 +22,9 @@
 ; TODO: dynamic memory allocation
 
 section .rodata
+    socket_file db "/tmp/asm_server.sock", 0
+    socket_file_len equ $ - socket_file
+
     content_length_header_key db "Content-Length", 0
     content_type_header_key db "Content-Type", 0
     connection_header_key db "Connection", 0
@@ -51,7 +54,7 @@ section .rodata
     PAGE_SIZE equ 4096 ; 4k
 
     SERVER_ADDR equ dword 0x00000000 ; 0.0.0.0
-    SERVER_PORT equ word 0x8913 ; htons(5001)
+    SERVER_PORT equ word 0x1027 ; htons(10000)
 
     ; standard stream fds
     stdin equ 0
@@ -63,6 +66,7 @@ section .rodata
     sys_write equ 1
     sys_open equ 2
     sys_close equ 3
+    sys_stat equ 4
     sys_mmap equ 9
     sys_mprotect equ 10
     sys_munmap equ 11
@@ -73,6 +77,8 @@ section .rodata
     sys_listen equ 50
     sys_setsockopt equ 54
     sys_exit equ 60
+    sys_unlink equ 87
+    sys_chmod equ 90
 
     ; create sockaddr_in_t class
     struc sockaddr_in_t
@@ -113,7 +119,6 @@ section .rodata
 
 section .data
     connection_data times 4096 db 0
-    socket_file db "/tmp/asm_socket.sock", 0
 
     current_header_key times 512 db 0
     current_header_value times 512 db 0
@@ -129,7 +134,7 @@ section .data
     ; create sockaddr_un_t instance
     sockaddr_un istruc sockaddr_un_t
         at sockaddr_un_t.sun_family, dw AF_UNIX
-        at sockaddr_un_t.sun_path, times 108 db 0
+        at sockaddr_un_t.sun_path, dq 0
     iend
 
     ; create server_t instance
@@ -163,9 +168,9 @@ section .text
 _start:
 
 _socket:
-    ; sys_socket(AF_INET, SOCK_STREAM, 0)
+    ; sys_socket(AF_UNIX, SOCK_STREAM, 0)
     mov rax, sys_socket
-    mov rdi, AF_INET
+    mov rdi, AF_UNIX
     mov rsi, SOCK_STREAM
     mov rdx, 0
     syscall
@@ -190,15 +195,33 @@ _socket:
 ;     jl _exit_fail
 
 _bind:
-    ; sys_bind(fd, &sockaddr_in, addrlen)
+    ; delete socket file if it exists
+    mov rax, sys_unlink
+    mov rdi, socket_file
+    syscall
+
+    ; copy sockaddr_in to sockaddr_un
+    mov rsi, socket_file
+    lea rdi, [sockaddr_un + sockaddr_un_t.sun_path]
+    mov rcx, socket_file_len
+    cld
+    rep movsb
+
+    ; sys_bind(fd, &sockaddr_un, addrlen)
     mov rax, sys_bind
     mov rdi, [server + server_t.listening_fd]
-    mov rsi, sockaddr_in
-    mov rdx, 16 ; TODO: dynamically set struct size
+    mov rsi, sockaddr_un
+    mov rdx, sockaddr_un_t_size
     syscall
 
     cmp rax, 0
     jl _exit_fail
+
+    ; give the socket file the correct permissions
+    mov rax, sys_chmod
+    mov rdi, socket_file
+    mov rsi, 0o777
+    syscall
 
 _listen:
     ; sys_listen(fd, backlog)
@@ -235,6 +258,12 @@ _recv:
     mov r8, 0
     mov r9, 0
     syscall
+
+    ; TEMPFIX: close socket reuseaddr isn't my friend
+    mov rax, sys_close
+    mov rdi, [server + server_t.listening_fd]
+    syscall
+    mov qword [server + server_t.listening_fd], 0
 
     call _parse_http_request
 
