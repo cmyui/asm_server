@@ -82,3 +82,5 @@ __read_http_header_value:
     mov rdi, [current_header_key]
     mov rsi, content_length_header_key
     call _string_compare
+
+    ret
