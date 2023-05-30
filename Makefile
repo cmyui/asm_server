@@ -10,3 +10,6 @@ build:
 
 run:
 	strace ./main.out
+
+debug:
+	gdb -ex 'run' ./main.out
