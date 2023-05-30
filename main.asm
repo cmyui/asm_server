@@ -25,13 +25,6 @@
 
 section .bss
 
-section .data
-    connection_data times 4096 db 0
-    socket_file db "/tmp/asm_socket.sock", 0
-
-    current_header_key times 512 db 0
-    current_header_value times 512 db 0
-
 section .rodata
     content_length_header_key db "Content-Length", 0
     content_type_header_key db "Content-Type", 0
@@ -93,37 +86,17 @@ section .rodata
         .sin_zero: resb 8
     endstruc
 
-    ; create sockaddr_in_t instance
-    sockaddr_in istruc sockaddr_in_t
-        at sockaddr_in_t.sin_family, dw AF_INET
-        at sockaddr_in_t.sin_port, dw SERVER_PORT
-        at sockaddr_in_t.sin_addr, dd SERVER_ADDR
-        at sockaddr_in_t.sin_zero, times 8 db 0
-    iend
-
     ; create sockaddr_un_t class
     struc sockaddr_un_t
         .sun_family: resw 1
         .sun_path: resb 108
     endstruc
 
-    ; create sockaddr_un_t unstance
-    sockaddr_un istruc sockaddr_un_t
-        at sockaddr_un_t.sun_family, dw AF_UNIX
-        at sockaddr_un_t.sun_path, times 108 db 0
-    iend
-
     ; create headers_t class
     struc server_t
         .listening_fd: resd 1
         .connecting_fd: resd 1
     endstruc
-
-    ; create server_t instance
-    server istruc server_t
-        at server_t.listening_fd, dd 0
-        at server_t.connecting_fd, dd 0
-    iend
 
     ; create headers_t class
     struc headers_t
@@ -135,6 +108,40 @@ section .rodata
         .osu_token: resq 1
     endstruc
 
+    ; create request_t class
+    struc request_t
+        .http_method: resq 1
+        .http_path: resq 1
+        .http_version: resq 1
+    endstruc
+
+section .data
+    connection_data times 4096 db 0
+    socket_file db "/tmp/asm_socket.sock", 0
+
+    current_header_key times 512 db 0
+    current_header_value times 512 db 0
+
+    ; create sockaddr_in_t instance
+    sockaddr_in istruc sockaddr_in_t
+        at sockaddr_in_t.sin_family, dw AF_INET
+        at sockaddr_in_t.sin_port, dw SERVER_PORT
+        at sockaddr_in_t.sin_addr, dd SERVER_ADDR
+        at sockaddr_in_t.sin_zero, times 8 db 0
+    iend
+
+    ; create sockaddr_un_t unstance
+    sockaddr_un istruc sockaddr_un_t
+        at sockaddr_un_t.sun_family, dw AF_UNIX
+        at sockaddr_un_t.sun_path, times 108 db 0
+    iend
+
+    ; create server_t instance
+    server istruc server_t
+        at server_t.listening_fd, dd 0
+        at server_t.connecting_fd, dd 0
+    iend
+
     ; create headers instance
     headers istruc headers_t
         at headers_t.content_length, dq 0
@@ -144,13 +151,6 @@ section .rodata
         at headers_t.user_agent, dq 0
         at headers_t.osu_token, dq 0
     iend
-
-    ; create request_t class
-    struc request_t
-        .http_method: resq 1
-        .http_path: resq 1
-        .http_version: resq 1
-    endstruc
 
     ; create request instance
     request istruc request_t
@@ -176,7 +176,7 @@ _socket:
     jl _exit_fail
 
     ; save listening socket fd
-    mov qword [server + server_t.listening_fd], rax
+    mov [server + server_t.listening_fd], eax
 
 ; _setsockopt:
 ;     ; sys_setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &optval, optlen)
