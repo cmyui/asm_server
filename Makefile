@@ -22,3 +22,9 @@ objdump:
 		-j.comment \
 		-j.text \
 		main.out
+
+valgrind:
+	valgrind --leak-check=full \
+		--show-leak-kinds=all \
+		--track-origins=yes \
+		./main.out
