@@ -259,18 +259,7 @@ _recv:
     mov r9, 0
     syscall
 
-    ; TEMPFIX: close socket reuseaddr isn't my friend
-    mov rax, sys_close
-    mov rdi, [server + server_t.listening_fd]
-    syscall
-    mov qword [server + server_t.listening_fd], 0
-
     call _parse_http_request
-
-_program_finalization:
-    ; exit with code 0
-    mov rdi, 0
-    jmp short _exit
 
 _close_listening_socket:
     ; sys_close(fd)
@@ -280,9 +269,13 @@ _close_listening_socket:
 
     mov qword [server + server_t.listening_fd], 0
 
-    cmp rax, 0
-    jg _exit
+_program_finalization:
+    ; exit with code 0
+    jmp _exit_success
 
+_exit_success:
+    xor rdi, rdi
+    jmp _exit
 _exit_fail:
     mov rdi, 1
 _exit:
