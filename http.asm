@@ -61,23 +61,23 @@ __read_http_header_key:
     cmp byte [connection_data + rax], 3Ah ; ":"
     jne __read_http_header_key
 
-    inc rax ; " "
-
     ; null terminate header key
     mov byte [connection_data + rax], 0
+
+    inc rax ; " "
 
     ; read header value
     lea rdi, [connection_data + rax + 1]
     mov [current_header_value], rdi
 __read_http_header_value:
     inc rax
-    cmp byte [connection_data + rax], 0Ah ; "\r"
+    cmp byte [connection_data + rax], 0Dh ; "\r"
     jne __read_http_header_value
-
-    inc rax ; "\n"
 
     ; null terminate header value
     mov byte [connection_data + rax], 0
+
+    inc rax ; "\n"
 
     ; check if header key is Content-Length
     mov rdi, [current_header_key]
