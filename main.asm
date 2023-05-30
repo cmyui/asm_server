@@ -23,11 +23,22 @@
 
 section .bss
 
+
 section .data
+    connection_data times 4096 db 0  ; 4k
+    socket_file db "/tmp/asmsocket.sock", 0
+
+section .rodata
+
     ; constants
     NULL equ 0
 
     SOCK_STREAM equ 1
+
+    SOL_SOCKET equ 1
+
+    SO_REUSEADDR equ 2
+    SO_REUSEPORT equ 15
 
     AF_UNIX equ 1
     AF_INET equ 2
@@ -61,10 +72,13 @@ section .data
     sys_recvfrom equ 45
     sys_bind equ 49
     sys_listen equ 50
+    sys_setsockopt equ 54
     sys_exit equ 60
 
     ; create struct types
 
+
+    ; create sockaddr_in_t class
     struc sockaddr_in_t
         .sin_family: resw 1
         .sin_port: resw 1
@@ -72,13 +86,7 @@ section .data
         .sin_zero: resb 8
     endstruc
 
-    struc server_t
-        .listening_fd: resd 1
-        .connecting_fd: resd 1
-    endstruc
-
-    ; create struct instances
-
+    ; create sockaddr_in_t instance
     sockaddr_in istruc sockaddr_in_t
         at sockaddr_in_t.sin_family, dw AF_INET
         at sockaddr_in_t.sin_port, dw SERVER_PORT
@@ -86,10 +94,62 @@ section .data
         at sockaddr_in_t.sin_zero, times 8 db 0
     iend
 
-    ; create server instance
+    ; create sockaddr_un_t class
+    struc sockaddr_un_t
+        .sun_family: resw 1
+        .sun_path: resw 1
+    endstruc
+
+    ; create sockaddr_un_t unstance
+    sockaddr_un istruc sockaddr_un_t
+        at sockaddr_un_t.sun_family, dw AF_UNIX
+        at sockaddr_un_t.sun_path, times 128 db 0
+    iend
+
+    ; create headers_t class
+    struc server_t
+        .listening_fd: resd 1
+        .connecting_fd: resd 1
+    endstruc
+
+    ; create server_t instance
     server istruc server_t
         at server_t.listening_fd, dd 0
         at server_t.connecting_fd, dd 0
+    iend
+
+    ; create headers_t class
+    struc headers_t
+        .content_length: resq 1
+        .content_type: resq 1
+        .connection: resq 1
+        .host: resq 1
+        .user_agent: resq 1
+        .osu_token: resq 1
+    endstruc
+
+    ; create headers instance
+    headers istruc headers_t
+        at headers_t.content_length, dd 0
+        at headers_t.content_type, dd 0
+        at headers_t.connection, dd 0
+        at headers_t.host, dd 0
+        at headers_t.user_agent, dd 0
+        at headers_t.osu_token, dd 0
+    iend
+
+    ; create request_t class
+    struc request_t
+        .http_method: resq 1
+        .http_path: resq 1
+        .http_version: resq 1
+    endstruc
+
+    ; create request instance
+    request istruc request_t
+        at request_t.http_method, dd 0
+        at request_t.http_path, dd 0
+        at request_t.http_version, dd 0
     iend
 
 section .text
@@ -100,7 +160,7 @@ _start:
 _socket:
     ; sys_socket(AF_INET, SOCK_STREAM, 0)
     mov rax, sys_socket
-    mov rdi, AF_INET
+    mov rdi, AF_UNIX
     mov rsi, SOCK_STREAM
     mov rdx, 0
     syscall
@@ -109,13 +169,26 @@ _socket:
     jl _exit_fail
 
     ; save listening socket fd
-    mov [server + server_t.listening_fd], rax
+    mov qword [server + server_t.listening_fd], rax
+
+; _setsockopt:
+;     ; sys_setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &optval, optlen)
+;     mov rax, sys_setsockopt
+;     mov rdi, [server + server_t.listening_fd]
+;     mov rsi, SOL_SOCKET
+;     mov rdx, SO_REUSEPORT
+;     mov rcx, 1
+;     mov r8, 8
+;     syscall
+
+;     cmp rax, 0
+;     jl _exit_fail
 
 _bind:
-    ; sys_bind(fd, &sockaddr_in, addrlen)
+    ; sys_bind(fd, &sockaddr_un, addrlen)
     mov rax, sys_bind
     mov rdi, [server + server_t.listening_fd]
-    mov rsi, sockaddr_in
+    mov rsi, sockaddr_un
     mov rdx, 16 ; TODO: dynamically set struct size
     syscall
 
@@ -146,27 +219,78 @@ _accept:
     ; save peer socket fd
     mov [server + server_t.connecting_fd], rax
 
-_handle_conn:
-    ; sys_mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
-    mov rax, sys_mmap
-    mov rdi, NULL
-    mov rsi, PAGE_SIZE
-    mov rdx, PROT_READ | PROT_WRITE
-    mov r10, MAP_PRIVATE | MAP_ANONYMOUS
-    mov r8, -1
+_recv:
+    ; sys_recv(rax, connection_data, 4096, 0)
+    ; https://man7.org/linux/man-pages/man2/recv.2.html
+    mov rax, sys_recvfrom
+    mov rdi, [server + server_t.connecting_fd]
+    mov rsi, connection_data
+    mov rdx, 4096
+    mov r10, 0
+    mov r8, 0
     mov r9, 0
     syscall
 
-    ; save mmap address into r12
-    mov rax, r12
+_parse_http_request:
+    xor rax, rax ; offset
 
+    ; save http_method
+    mov qword [request + request_t.http_method], connection_data
+__read_http_method:
+    inc rax
+    cmp byte [connection_data + rax], 32h
+    jne __read_http_method
+
+    mov byte [connection_data + rax], 0 ; null terminate
+
+    ; save http_path
+    lea rdi, [connection_data + rax + 1]
+    mov [request + request_t.http_path], rdi
+__read_http_path:
+    inc rax
+    cmp byte [connection_data + rax], 32h
+    jne __read_http_path
+
+    mov byte [connection_data + rax], 0 ; null terminate
+
+    ; save http_version
+    lea rdi, [connection_data + rax + 1]
+    mov [request + request_t.http_version], rdi
+__read_http_version:
+    inc rax
+    cmp byte [connection_data + rax], 0Ah ; \r
+    jne __read_http_version
+
+    mov byte [connection_data + rax], 0 ; null terminate
+
+    inc rax ; \n
+
+__parse_http_headers:
+
+_program_finalization:
     ; exit with code 0
     mov rdi, 0
     jmp short _exit
 
+_close_listening_socket:
+    ; sys_close(fd)
+    mov rax, sys_close
+    mov rdi, [server + server_t.listening_fd]
+    syscall
+
+    mov qword [server + server_t.listening_fd], 0
+
+    cmp rax, 0
+    jg _exit
+
 _exit_fail:
     mov rdi, 1
 _exit:
+
+    ; close socket if it's open
+    cmp byte [server + server_t.connecting_fd], 0
+    jne _close_listening_socket
+
     ; sys_exit(0)
     mov rax, sys_exit
     syscall
