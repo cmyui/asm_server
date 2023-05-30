@@ -53,12 +53,13 @@ __read_http_headers:
     ;        headers.osu_token = value
 
     ; read header key
-    lea rdi, [connection_data + rax + 1]
+    lea rdi, [connection_data + rax]
     mov [current_header_key], rdi
+
 __read_http_header_key:
     inc rax
     cmp byte [connection_data + rax], 3Ah ; ":"
-    jne __read_http_headers
+    jne __read_http_header_key
 
     inc rax ; " "
 
