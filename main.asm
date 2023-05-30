@@ -1,14 +1,14 @@
 [bits 64]
 
 ; a socket server implementation in pure (nasm) assembly; for learning purposes
-; if you notice anything that can be improved, please let me know!
+; i am very much a noob at assembly - if you notice anything that can be improved, please let me know!
 ; github issues / cmyui#0425 / cmyuiosu@gmail.com
 
 ; types
-; byte  = 1 byte  (suffix b)
-; word  = 2 bytes (suffix w)
-; dword = 4 bytes (suffix l)
-; qword = 8 bytes (suffix q)
+; db | resb = byte (1 byte)
+; dw | resw = word (2 bytes)
+; dd | resd = dword (4 bytes)
+; dq | resq = qword (8 bytes)
 
 ; x86-64 system v amd64 abi calling convention
 ; https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI
@@ -19,17 +19,27 @@
 ; syscall number | args
 ; rax | rdi, rsi, rdx, r10, r8, r9
 
-; TODO: error handling (-1 - -4096)
+; TODO: dynamic memory allocation
 
 %include "http.asm"
 
 section .bss
 
 section .data
-    connection_data times 4096 db 0  ; 4k
-    socket_file db "/tmp/asmsocket.sock", 0
+    connection_data times 4096 db 0
+    socket_file db "/tmp/asm_socket.sock", 0
+
+    current_header_key times 512 db 0
+    current_header_value times 512 db 0
 
 section .rodata
+    content_length_header_key db "Content-Length", 0
+    content_type_header_key db "Content-Type", 0
+    connection_header_key db "Connection", 0
+    host_header_key db "Host", 0
+    user_agent_header_key db "User-Agent", 0
+    osu_token_header_key db "osu-token", 0
+
     ; constants
     NULL equ 0
 
@@ -94,13 +104,13 @@ section .rodata
     ; create sockaddr_un_t class
     struc sockaddr_un_t
         .sun_family: resw 1
-        .sun_path: resb 128
+        .sun_path: resb 108
     endstruc
 
     ; create sockaddr_un_t unstance
     sockaddr_un istruc sockaddr_un_t
         at sockaddr_un_t.sun_family, dw AF_UNIX
-        at sockaddr_un_t.sun_path, times 128 db 0
+        at sockaddr_un_t.sun_path, times 108 db 0
     iend
 
     ; create headers_t class
@@ -157,7 +167,7 @@ _start:
 _socket:
     ; sys_socket(AF_INET, SOCK_STREAM, 0)
     mov rax, sys_socket
-    mov rdi, AF_UNIX
+    mov rdi, AF_INET
     mov rsi, SOCK_STREAM
     mov rdx, 0
     syscall
@@ -182,10 +192,10 @@ _socket:
 ;     jl _exit_fail
 
 _bind:
-    ; sys_bind(fd, &sockaddr_un, addrlen)
+    ; sys_bind(fd, &sockaddr_in, addrlen)
     mov rax, sys_bind
     mov rdi, [server + server_t.listening_fd]
-    mov rsi, sockaddr_un
+    mov rsi, sockaddr_in
     mov rdx, 16 ; TODO: dynamically set struct size
     syscall
 

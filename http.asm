@@ -1,3 +1,5 @@
+%include "strings.asm"
+
 _parse_http_request:
     xor rax, rax ; offset
 
@@ -50,15 +52,33 @@ __read_http_headers:
     ;    elif header == 'osu-token':
     ;        headers.osu_token = value
 
-__read_http_header:
-    ; read line
+    ; read header key
+    lea rdi, [connection_data + rax + 1]
+    mov [current_header_key], rdi
+__read_http_header_key:
     inc rax
     cmp byte [connection_data + rax], 3Ah ; ":"
     jne __read_http_headers
 
     inc rax ; " "
 
-    ; save header
-    ; mov rdi, [connection_data + rax]
+    ; null terminate header key
+    mov byte [connection_data + rax], 0
 
-    ret
+    ; read header value
+    lea rdi, [connection_data + rax + 1]
+    mov [current_header_value], rdi
+__read_http_header_value:
+    inc rax
+    cmp byte [connection_data + rax], 0Ah ; "\r"
+    jne __read_http_header_value
+
+    inc rax ; "\n"
+
+    ; null terminate header value
+    mov byte [connection_data + rax], 0
+
+    ; check if header key is Content-Length
+    mov rdi, [current_header_key]
+    mov rsi, content_length_header_key
+    call _string_compare
