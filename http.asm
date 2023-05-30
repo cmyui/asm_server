@@ -52,6 +52,7 @@ __read_http_headers:
     ;    elif header == 'osu-token':
     ;        headers.osu_token = value
 
+__read_http_header:
     ; read header key
     lea rdi, [connection_data + rax]
     mov [current_header_key], rdi
@@ -83,5 +84,7 @@ __read_http_header_value:
     mov rdi, [current_header_key]
     mov rsi, content_length_header_key
     call _string_compare
+
+    ; TODO: parse all the headers into memory
 
     ret
