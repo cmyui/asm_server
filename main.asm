@@ -32,6 +32,8 @@ section .rodata
     user_agent_header_key db "User-Agent", 0
     osu_token_header_key db "osu-token", 0
 
+    new_line db 0xa
+
     ; constants
     NULL equ 0
 
