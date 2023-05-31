@@ -1,4 +1,5 @@
 %include "strings.asm"
+%include "io.asm"
 
 ; preserve: rbx, rsp, rbp, r12, r13, r14, r15
 ; scratch: rdi, rsi, rdx, rcx, r8, r9, r10, r11
@@ -85,54 +86,61 @@ check_if_http_header_is_content_length:
     cmp rdx, 0
     jne check_if_http_header_is_content_type
 save_http_header_to_content_length:
+    ; special case: store content length as an int
     mov rdi, [current_header_value]
     call _string_to_int
     mov qword [headers + headers_t.content_length], rax
+    jmp check_if_more_headers_remain
 
 check_if_http_header_is_content_type:
     mov rdi, [current_header_key]
-    mov rdi, content_type_header_key
+    mov rsi, content_type_header_key
     call _string_compare
     cmp rdx, 0
     jne check_if_http_header_is_connection
 save_http_header_to_content_type:
     mov qword [headers + headers_t.content_type], current_header_value
+    jmp check_if_more_headers_remain
 
 check_if_http_header_is_connection:
     mov rdi, [current_header_key]
-    mov rdi, connection_header_key
+    mov rsi, connection_header_key
     call _string_compare
     cmp rdx, 0
     jne check_if_http_header_is_host
 save_http_header_to_connection:
     mov qword [headers + headers_t.connection], current_header_value
+    jmp check_if_more_headers_remain
 
 check_if_http_header_is_host:
     mov rdi, [current_header_key]
-    mov rdi, host_header_key
+    mov rsi, host_header_key
     call _string_compare
     cmp rdx, 0
     jne check_if_http_header_is_user_agent
 save_http_header_to_host:
     mov qword [headers + headers_t.host], current_header_value
+    jmp check_if_more_headers_remain
 
 check_if_http_header_is_user_agent:
     mov rdi, [current_header_key]
-    mov rdi, user_agent_header_key
+    mov rsi, user_agent_header_key
     call _string_compare
     cmp rdx, 0
     jne check_if_http_header_is_osu_token
 save_http_header_to_user_agent:
     mov qword [headers + headers_t.user_agent], current_header_value
+    jmp check_if_more_headers_remain
 
 check_if_http_header_is_osu_token:
     mov rdi, [current_header_key]
-    mov rdi, osu_token_header_key
+    mov rsi, osu_token_header_key
     call _string_compare
     cmp rdx, 0
     jne end_of_header_parsing
 save_http_header_to_osu_token:
     mov qword [headers + headers_t.osu_token], current_header_value
+    jmp check_if_more_headers_remain
 
 check_if_more_headers_remain:
     ; check if we should look (did we hit "\r\n\r\n"?)

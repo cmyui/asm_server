@@ -7,7 +7,7 @@ _string_compare:
     push rax
     xor rax, rax
 
-loop:
+string_compare_loop:
     mov byte dl, [rdi + rax]
     mov byte dh, [rsi + rax]
 
@@ -21,7 +21,7 @@ loop:
 
     ; check if bytes are the same
     cmp dl, dh
-    je loop ; continue if so
+    je string_compare_loop ; continue if so
 
     jmp mismatch
 match:
