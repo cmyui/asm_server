@@ -86,10 +86,7 @@ check_if_http_header_is_content_length:
     cmp rdx, 0
     jne check_if_http_header_is_content_type
 save_http_header_to_content_length:
-    ; special case: store content length as an int
-    mov rdi, [current_header_value]
-    call _string_to_int
-    mov qword [headers + headers_t.content_length], rax
+    mov qword [headers + headers_t.content_length], current_header_value
     jmp check_if_more_headers_remain
 
 check_if_http_header_is_content_type:
